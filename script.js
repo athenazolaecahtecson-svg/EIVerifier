@@ -1,11 +1,17 @@
 /* =====================================================
-   CyberSafe PH — Emergency Information Verifier
+   CalamitySafePH — Emergency Information Verifier
    All logic runs locally in the browser.
    No network requests, no storage, no analytics.
    ===================================================== */
 
+var prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 document.addEventListener("DOMContentLoaded", function () {
   initNav();
+  initRain();
+  initLightning();
+  initTilt();
+  initScrollReveal();
   initVerifier();
   initDisasterRisks();
   initGuide();
@@ -24,7 +30,6 @@ function initNav() {
     toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
   });
 
-  // Close the mobile menu once a link is chosen
   mobileNav.querySelectorAll("a").forEach(function (link) {
     link.addEventListener("click", function () {
       mobileNav.classList.remove("open");
@@ -34,16 +39,139 @@ function initNav() {
 }
 
 /* =====================================================
+   AMBIENT RAIN (canvas, subtle, decorative only)
+   ===================================================== */
+function initRain() {
+  var canvas = document.getElementById("rainCanvas");
+  if (!canvas || prefersReducedMotion) return;
+
+  var ctx = canvas.getContext("2d");
+  var drops = [];
+  var dropCount = window.innerWidth < 760 ? 60 : 130;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  function makeDrop() {
+    return {
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      len: 10 + Math.random() * 18,
+      speed: 4 + Math.random() * 6,
+      opacity: 0.08 + Math.random() * 0.12
+    };
+  }
+
+  for (var i = 0; i < dropCount; i++) drops.push(makeDrop());
+
+  function tick() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "rgba(200, 215, 240, 0.5)";
+    ctx.lineWidth = 1;
+
+    drops.forEach(function (drop) {
+      ctx.globalAlpha = drop.opacity;
+      ctx.beginPath();
+      ctx.moveTo(drop.x, drop.y);
+      ctx.lineTo(drop.x - 2, drop.y + drop.len);
+      ctx.stroke();
+
+      drop.y += drop.speed;
+      drop.x -= 0.5;
+
+      if (drop.y > canvas.height) {
+        drop.y = -drop.len;
+        drop.x = Math.random() * canvas.width;
+      }
+    });
+    ctx.globalAlpha = 1;
+
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+/* =====================================================
+   LIGHTNING FLASH (occasional, subtle)
+   ===================================================== */
+function initLightning() {
+  var flashEl = document.getElementById("lightningFlash");
+  if (!flashEl || prefersReducedMotion) return;
+
+  function scheduleFlash() {
+    var delay = 6000 + Math.random() * 9000;
+    setTimeout(function () {
+      flashEl.classList.add("flash");
+      setTimeout(function () { flashEl.classList.remove("flash"); }, 550);
+      scheduleFlash();
+    }, delay);
+  }
+  scheduleFlash();
+}
+
+/* =====================================================
+   3D TILT for the hero status panel
+   ===================================================== */
+function initTilt() {
+  var panel = document.getElementById("statusPanel");
+  if (!panel || prefersReducedMotion) return;
+  if (window.matchMedia("(max-width: 760px)").matches) return;
+
+  var bounds;
+
+  panel.addEventListener("mouseenter", function () {
+    bounds = panel.getBoundingClientRect();
+  });
+
+  panel.addEventListener("mousemove", function (e) {
+    if (!bounds) bounds = panel.getBoundingClientRect();
+    var relX = (e.clientX - bounds.left) / bounds.width;
+    var relY = (e.clientY - bounds.top) / bounds.height;
+    var rotateY = (relX - 0.5) * 14 - 6;
+    var rotateX = (0.5 - relY) * 14 + 4;
+    panel.style.transform = "rotateY(" + rotateY + "deg) rotateX(" + rotateX + "deg)";
+  });
+
+  panel.addEventListener("mouseleave", function () {
+    panel.style.transform = "rotateY(-6deg) rotateX(4deg)";
+  });
+}
+
+/* =====================================================
+   SCROLL REVEAL
+   ===================================================== */
+function initScrollReveal() {
+  var targets = document.querySelectorAll("[data-reveal]");
+  if (!targets.length) return;
+
+  if (prefersReducedMotion || !("IntersectionObserver" in window)) {
+    targets.forEach(function (el) { el.classList.add("is-visible"); });
+    return;
+  }
+
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15, rootMargin: "0px 0px -60px 0px" });
+
+  targets.forEach(function (el) { observer.observe(el); });
+}
+
+/* =====================================================
    RULE-BASED RISK DATA
-   Each category lists the phrases/patterns it looks for,
-   the label shown when found, and the explanation shown
-   to the user. This is intentionally simple and transparent:
-   a real message can be scored by hand against this same list.
    ===================================================== */
 var RISK_CATEGORIES = [
   {
     id: "urgency",
-    label: "Urgency or panic language",
+    label: "Urgency Language",
     explanation: "Urgent language can be used by scammers to pressure people into acting before verifying information.",
     patterns: [
       "urgent", "act now", "share now", "share immediately", "immediately",
@@ -52,13 +180,13 @@ var RISK_CATEGORIES = [
   },
   {
     id: "otp",
-    label: "OTP / sensitive credential request",
+    label: "OTP Request",
     explanation: "Never share an OTP with another person or suspicious website. An OTP is a security credential and should remain private.",
     patterns: ["otp", "one-time password", "one time password"]
   },
   {
     id: "sensitive-info",
-    label: "Sensitive personal or financial information request",
+    label: "Sensitive Information Request",
     explanation: "Legitimate agencies do not usually ask for passwords, PINs, or account details through unsolicited messages or links.",
     patterns: [
       "password", "pin", "gcash", "bank account", "credit card", "debit card",
@@ -67,7 +195,7 @@ var RISK_CATEGORIES = [
   },
   {
     id: "financial",
-    label: "Financial or relief assistance claim",
+    label: "Financial Assistance Claim",
     explanation: "Financial assistance and donation claims should be verified through official sources before providing information or sending money.",
     patterns: [
       "₱5,000", "₱10,000", "5,000", "10,000", "cash assistance", "financial assistance",
@@ -77,19 +205,17 @@ var RISK_CATEGORIES = [
   },
   {
     id: "links",
-    label: "Suspicious or unfamiliar link",
+    label: "Suspicious Link",
     explanation: "Suspicious or unfamiliar links should be checked carefully before opening.",
     patterns: [
       "bit.ly", "tinyurl", "http://", "https://", "www.",
       "claim", "reward", "verify", "assistance", "registration", "free"
     ],
-    // For links, only count the "link-shape" patterns as a hit on their own;
-    // keyword patterns like "claim"/"reward" are only meaningful together with a URL.
     requiresUrlContext: true
   },
   {
     id: "impersonation",
-    label: "Government organization mentioned",
+    label: "Government Impersonation",
     explanation: "An organization name can be used to make a fraudulent message appear legitimate. Verify the announcement through the organization's official communication channels.",
     patterns: [
       "pagasa", "phivolcs", "ndrrmc", "dswd", "deped", "dost", "dict", "doh", "lgu",
@@ -98,7 +224,7 @@ var RISK_CATEGORIES = [
   },
   {
     id: "unverified",
-    label: "Unverified or authority-based claim",
+    label: "Unverified Claim",
     explanation: "Claims should be verified through an official source before being shared.",
     patterns: [
       "confirmed", "official announcement", "government says", "according to authorities",
@@ -119,6 +245,7 @@ function initVerifier() {
   var exampleBtn = document.getElementById("exampleBtn");
   var clearBtn = document.getElementById("clearBtn");
   var resultsWrap = document.getElementById("resultsWrap");
+  var analyzingRow = document.getElementById("analyzingRow");
 
   var EXAMPLE_MESSAGE = "URGENT! Classes are suspended nationwide because of the incoming typhoon. Share this message immediately! DepEd confirmed this official announcement. Click this link bit.ly/reliefclaim to register for \u20B15,000 emergency assistance. Enter the OTP sent to your phone to verify your account.";
 
@@ -147,10 +274,20 @@ function initVerifier() {
       setTimeout(function () { textarea.classList.remove("shake"); }, 300);
       return;
     }
-    var results = analyzeMessage(message);
-    renderResults(results);
-    resultsWrap.hidden = false;
-    resultsWrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+    resultsWrap.hidden = true;
+    analyzingRow.hidden = false;
+    verifyBtn.disabled = true;
+
+    var delay = prefersReducedMotion ? 50 : 900;
+    setTimeout(function () {
+      analyzingRow.hidden = true;
+      verifyBtn.disabled = false;
+      var results = analyzeMessage(message);
+      renderResults(results);
+      resultsWrap.hidden = false;
+      resultsWrap.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "nearest" });
+    }, delay);
   });
 }
 
@@ -170,8 +307,6 @@ function analyzeMessage(message) {
     });
 
     if (category.id === "links") {
-      // Only flag "suspicious link" when an actual URL/shortened-link pattern
-      // is present, not just because a keyword like "claim" appears alone.
       found = hasUrl;
     }
 
@@ -190,53 +325,69 @@ function analyzeMessage(message) {
 
 function renderResults(results) {
   var banner = document.getElementById("riskBanner");
-  var riskIcon = document.getElementById("riskIcon");
   var riskLevel = document.getElementById("riskLevel");
   var riskScoreText = document.getElementById("riskScoreText");
   var indicatorList = document.getElementById("indicatorList");
   var explanationList = document.getElementById("explanationList");
   var recommendationText = document.getElementById("recommendationText");
+  var ringProgress = document.getElementById("ringProgress");
+  var ringScore = document.getElementById("ringScore");
+  var progressFill = document.getElementById("riskProgressFill");
 
   banner.classList.remove("risk-low", "risk-medium", "risk-high");
+  banner.classList.add("risk-" + results.level);
 
-  var levelText = {
-    low: "LOW RISK",
-    medium: "MEDIUM RISK",
-    high: "HIGH RISK"
-  };
-  var levelIcon = {
-    low: "\u2705",
-    medium: "\u26A0\uFE0F",
-    high: "\u26A0\uFE0F"
-  };
+  var levelText = { low: "LOW RISK", medium: "MEDIUM RISK", high: "HIGH RISK" };
   var levelRecommendation = {
     low: "No obvious warning signs were detected. Even so, verify any emergency information through an official source before acting on it or sharing it further.",
     medium: "This message contains warning signs that are common in scam or misinformation content. Do not click links or share personal information until you verify it through an official source.",
     high: "This message contains multiple warning signs. Do not click suspicious links or provide sensitive information. Verify this announcement through an official source before sharing."
   };
 
-  banner.classList.add("risk-" + results.level);
-  riskIcon.textContent = levelIcon[results.level];
   riskLevel.textContent = levelText[results.level];
-  riskScoreText.textContent = "Risk Score: " + results.score;
+  riskScoreText.textContent = results.score + " warning indicator" + (results.score === 1 ? "" : "s") + " detected";
   recommendationText.textContent = levelRecommendation[results.level];
 
-  // Indicator list
+  // Circular ring: circumference for r=52 is ~326.7
+  var circumference = 2 * Math.PI * 52;
+  var maxScore = RISK_CATEGORIES.length; // 7
+  var fraction = Math.min(results.score / maxScore, 1);
+  var offset = circumference - fraction * circumference;
+
+  // Animated count-up for the score number
+  animateCountUp(ringScore, results.score, prefersReducedMotion ? 0 : 700);
+
+  requestAnimationFrame(function () {
+    ringProgress.style.strokeDasharray = circumference;
+    ringProgress.style.strokeDashoffset = prefersReducedMotion ? offset : circumference;
+    requestAnimationFrame(function () {
+      ringProgress.style.strokeDashoffset = offset;
+    });
+  });
+
+  progressFill.style.width = prefersReducedMotion ? (fraction * 100) + "%" : "0%";
+  setTimeout(function () {
+    progressFill.style.width = (fraction * 100) + "%";
+  }, prefersReducedMotion ? 0 : 60);
+
+  // Indicator list — animate in one by one
   indicatorList.innerHTML = "";
+  indicatorList.classList.toggle("empty-state", results.matched.length === 0);
+
   if (results.matched.length === 0) {
-    indicatorList.classList.add("empty-state");
     var emptyItem = document.createElement("li");
     emptyItem.textContent = "No obvious warning signs detected in this message.";
+    emptyItem.style.animationDelay = "0s";
     indicatorList.appendChild(emptyItem);
   } else {
-    indicatorList.classList.remove("empty-state");
-    results.matched.forEach(function (category) {
+    results.matched.forEach(function (category, index) {
       var li = document.createElement("li");
       var check = document.createElement("span");
       check.className = "check";
-      check.textContent = "\u2713";
+      check.textContent = "!";
       li.appendChild(check);
       li.appendChild(document.createTextNode(category.label));
+      li.style.animationDelay = (prefersReducedMotion ? 0 : index * 0.08) + "s";
       indicatorList.appendChild(li);
     });
   }
@@ -256,6 +407,24 @@ function renderResults(results) {
   }
 }
 
+function animateCountUp(el, target, duration) {
+  if (!duration) {
+    el.textContent = target;
+    return;
+  }
+  var start = 0;
+  var startTime = null;
+
+  function step(timestamp) {
+    if (!startTime) startTime = timestamp;
+    var progress = Math.min((timestamp - startTime) / duration, 1);
+    var value = Math.round(start + (target - start) * progress);
+    el.textContent = value;
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
 /* =====================================================
    DISASTER RISKS SECTION
    ===================================================== */
@@ -264,6 +433,7 @@ var DISASTER_DATA = [
     id: "typhoon",
     icon: "\uD83C\uDF2A\uFE0F",
     name: "Typhoon",
+    description: "Storm-driven scams around class suspensions and relief aid.",
     risks: [
       "Fake class suspension announcements",
       "Fake weather warnings",
@@ -276,6 +446,7 @@ var DISASTER_DATA = [
     id: "flood",
     icon: "\uD83C\uDF0A",
     name: "Flood",
+    description: "False evacuation and assistance messages during flooding.",
     risks: [
       "Fake evacuation announcements",
       "Fake relief assistance",
@@ -287,6 +458,7 @@ var DISASTER_DATA = [
     id: "earthquake",
     icon: "\uD83C\uDF0F",
     name: "Earthquake",
+    description: "Panic-driven misinformation following seismic events.",
     risks: [
       "Fake casualty reports",
       "Fake evacuation instructions",
@@ -298,6 +470,7 @@ var DISASTER_DATA = [
     id: "volcanic",
     icon: "\uD83C\uDF0B",
     name: "Volcanic Eruption",
+    description: "Fabricated eruption and evacuation updates.",
     risks: [
       "Fake eruption warnings",
       "Fake evacuation orders",
@@ -309,6 +482,7 @@ var DISASTER_DATA = [
     id: "fire",
     icon: "\uD83D\uDD25",
     name: "Fire",
+    description: "Rapid-spread hoaxes during fire incidents.",
     risks: [
       "Fake evacuation information",
       "Fake donation campaigns",
@@ -320,6 +494,7 @@ var DISASTER_DATA = [
     id: "general",
     icon: "\u26A0\uFE0F",
     name: "General Emergency",
+    description: "Broad patterns seen across most calamity types.",
     risks: [
       "Fake government announcements",
       "Phishing",
@@ -335,6 +510,7 @@ function initDisasterRisks() {
   var detail = document.getElementById("disasterDetail");
   var detailIcon = document.getElementById("disasterDetailIcon");
   var detailTitle = document.getElementById("disasterDetailTitle");
+  var detailDesc = document.getElementById("disasterDetailDesc");
   var detailList = document.getElementById("disasterDetailList");
 
   DISASTER_DATA.forEach(function (disaster) {
@@ -342,7 +518,10 @@ function initDisasterRisks() {
     card.type = "button";
     card.className = "disaster-card";
     card.setAttribute("data-id", disaster.id);
-    card.innerHTML = '<span class="icon" aria-hidden="true">' + disaster.icon + '</span>' + disaster.name;
+    card.innerHTML =
+      '<span class="icon" aria-hidden="true">' + disaster.icon + '</span>' +
+      '<span class="card-name">' + disaster.name + '</span>' +
+      '<span class="card-view">View Risks →</span>';
 
     card.addEventListener("click", function () {
       grid.querySelectorAll(".disaster-card").forEach(function (c) {
@@ -352,6 +531,7 @@ function initDisasterRisks() {
 
       detailIcon.textContent = disaster.icon;
       detailTitle.textContent = disaster.name;
+      detailDesc.textContent = disaster.description;
       detailList.innerHTML = "";
       disaster.risks.forEach(function (risk) {
         var li = document.createElement("li");
@@ -360,8 +540,22 @@ function initDisasterRisks() {
       });
 
       detail.hidden = false;
-      detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      detail.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "nearest" });
     });
+
+    if (!prefersReducedMotion && !window.matchMedia("(max-width: 760px)").matches) {
+      card.addEventListener("mousemove", function (e) {
+        var bounds = card.getBoundingClientRect();
+        var relX = (e.clientX - bounds.left) / bounds.width;
+        var relY = (e.clientY - bounds.top) / bounds.height;
+        var rotateY = (relX - 0.5) * 10;
+        var rotateX = (0.5 - relY) * 10;
+        card.style.transform = "translateY(-4px) rotateY(" + rotateY + "deg) rotateX(" + rotateX + "deg)";
+      });
+      card.addEventListener("mouseleave", function () {
+        card.style.transform = "";
+      });
+    }
 
     grid.appendChild(card);
   });
