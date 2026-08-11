@@ -3,33 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CyberSafe PH — Emergency Information Verifier</title>
-  <meta name="description" content="A local, offline cybersecurity awareness tool that scans emergency and disaster-related messages for common scam, phishing, and misinformation warning signs in the Philippines.">
+  <title>CalamitySafePH — Stay Alert. Stay Safe. Verify Before You Share.</title>
+  <meta name="description" content="CalamitySafePH scans emergency and disaster-related messages for common scam, phishing, and misinformation warning signs in the Philippines — analyzed locally in your browser.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+  <!-- Ambient rain layer, sits behind everything -->
+  <canvas id="rainCanvas" aria-hidden="true"></canvas>
+
   <!-- ================= HEADER ================= -->
-  <header class="site-header">
+  <header class="site-header" id="siteHeader">
     <div class="header-inner">
       <a href="#top" class="brand">
         <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 40 40" width="34" height="34">
-            <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="2" opacity="0.35"/>
-            <circle cx="20" cy="20" r="12" fill="none" stroke="currentColor" stroke-width="2" opacity="0.6"/>
+          <svg viewBox="0 0 40 40" width="30" height="30">
+            <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+            <circle cx="20" cy="20" r="12" fill="none" stroke="currentColor" stroke-width="2" opacity="0.55"/>
             <circle cx="20" cy="20" r="3.5" fill="currentColor"/>
             <line x1="20" y1="2" x2="20" y2="8" stroke="currentColor" stroke-width="2"/>
           </svg>
         </span>
         <span class="brand-text">
-          <span class="brand-name">CyberSafe<em>PH</em></span>
+          <span class="brand-name">Calamity<em>Safe</em>PH</span>
           <span class="brand-sub">Emergency Information Verifier</span>
         </span>
       </a>
       <nav class="site-nav" aria-label="Primary">
         <a href="#verify">Verify</a>
         <a href="#disaster-risks">Disaster Risks</a>
-        <a href="#how-to-verify">How to Verify</a>
+        <a href="#how-to-verify">Verification Guide</a>
         <a href="#safety-tips">Safety Tips</a>
       </nav>
       <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="site-nav-mobile" aria-label="Toggle navigation menu">
@@ -39,7 +42,7 @@
     <nav class="site-nav-mobile" id="site-nav-mobile" aria-label="Mobile">
       <a href="#verify">Verify</a>
       <a href="#disaster-risks">Disaster Risks</a>
-      <a href="#how-to-verify">How to Verify</a>
+      <a href="#how-to-verify">Verification Guide</a>
       <a href="#safety-tips">Safety Tips</a>
     </nav>
   </header>
@@ -47,39 +50,77 @@
   <main id="top">
 
     <!-- ================= HERO ================= -->
-    <section class="hero">
-      <div class="hero-scan" aria-hidden="true"></div>
+    <section class="hero" id="hero">
+      <div class="hero-sky" aria-hidden="true">
+        <div class="cloud-layer cloud-far"></div>
+        <div class="cloud-layer cloud-near"></div>
+        <div class="lightning-flash" id="lightningFlash"></div>
+        <div class="fog-layer"></div>
+        <div class="city-silhouette"></div>
+      </div>
+
       <div class="hero-inner">
-        <p class="eyebrow">Rule-based · Offline · Runs entirely in your browser</p>
-        <h1>Before You Share,<br><span class="hero-highlight">Verify.</span></h1>
-        <p class="hero-subtitle">
-          Identify potential cybersecurity and misinformation risks in emergency
-          messages before clicking, responding, or sharing them further.
-        </p>
-        <a href="#verify" class="btn btn-primary btn-large">
-          Start Verification
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a>
-        <div class="hero-stats" aria-hidden="true">
-          <div class="hero-stat"><span class="scan-blip"></span> Local analysis only</div>
-          <div class="hero-stat"><span class="scan-blip"></span> No data leaves this page</div>
-          <div class="hero-stat"><span class="scan-blip"></span> 6 risk categories scanned</div>
+        <div class="hero-copy" data-reveal>
+          <p class="eyebrow eyebrow-light">
+            <span class="live-dot" aria-hidden="true"></span>
+            System ready · Local analysis · Philippines
+          </p>
+          <h1>Calamity<span class="brand-em">Safe</span>PH</h1>
+          <p class="hero-tagline">Stay Alert. Stay Safe. Verify Before You Share.</p>
+          <p class="hero-subtitle">
+            An emergency information verification tool designed to help identify
+            potential cybersecurity and misinformation risks during calamities in the Philippines.
+          </p>
+          <a href="#verify" class="btn btn-primary btn-large btn-glow">
+            Verify an Emergency Message
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
         </div>
+
+        <div class="hero-panel" data-reveal data-reveal-delay="1">
+          <div class="panel-glass tilt-el" id="statusPanel">
+            <div class="panel-header">
+              <span class="panel-title">CALAMITYSAFE PH</span>
+              <span class="panel-status"><span class="status-dot"></span>SYSTEM READY</span>
+            </div>
+            <p class="panel-caption">EMERGENCY INFORMATION SYSTEM</p>
+            <ul class="panel-rows">
+              <li><span>Information Verification</span><span class="tag tag-online">ONLINE</span></li>
+              <li><span>Privacy Protection</span><span class="tag tag-active">ACTIVE</span></li>
+              <li><span>Local Analysis</span><span class="tag tag-active">ACTIVE</span></li>
+            </ul>
+            <div class="panel-footer-note">
+              Visual status display of this project's local features only —
+              not connected to any government agency or live data source.
+            </div>
+          </div>
+
+          <div class="floating-badge badge-warning" aria-hidden="true">
+            <span>⚠️</span> Verify First
+          </div>
+          <div class="floating-badge badge-lock" aria-hidden="true">
+            <span>🔒</span> Private &amp; Local
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll-cue" aria-hidden="true">
+        <span></span>
       </div>
     </section>
 
     <!-- ================= VERIFIER ================= -->
     <section class="verify-section" id="verify">
+      <div class="section-bg section-bg-rain" aria-hidden="true"></div>
       <div class="section-inner">
-        <p class="eyebrow">Message scanner</p>
-        <h2>Paste the message. We'll scan it for warning signs.</h2>
-        <p class="section-lead">
-          This scanner checks text against known patterns used in scam, phishing, and
-          misinformation messages during Philippine disasters and emergencies. It does not
-          decide whether a message is true or false — only whether it shows common warning signs.
+        <p class="eyebrow" data-reveal>Message scanner</p>
+        <h2 data-reveal>Verify Before You Share</h2>
+        <p class="section-lead" data-reveal>
+          Paste an emergency message, announcement, or social media post below.
+          We'll identify potential warning signs that may require further verification.
         </p>
 
-        <div class="verifier-card">
+        <div class="verifier-card glass-card" data-reveal>
           <div class="verifier-toolbar">
             <label for="messageInput" class="verifier-label">Emergency message</label>
             <div class="toolbar-buttons">
@@ -98,22 +139,38 @@
 
           <div class="verifier-footer">
             <span class="char-counter"><span id="charCount">0</span> / 4000 characters</span>
-            <button type="button" class="btn btn-primary" id="verifyBtn">
+            <button type="button" class="btn btn-primary btn-glow" id="verifyBtn">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               Verify Information
             </button>
+          </div>
+
+          <!-- Analyzing state -->
+          <div class="analyzing-row" id="analyzingRow" hidden>
+            <span class="analyzing-spinner" aria-hidden="true"></span>
+            <span>Analyzing message…</span>
           </div>
         </div>
 
         <!-- RESULTS -->
         <div class="results-wrap" id="resultsWrap" hidden>
-          <div class="results-card" id="resultsCard">
+          <div class="results-card glass-card" id="resultsCard">
             <div class="risk-banner" id="riskBanner">
-              <div class="risk-banner-top">
-                <span class="risk-icon" id="riskIcon">⚠️</span>
-                <div>
-                  <p class="risk-level" id="riskLevel">LOW RISK</p>
-                  <p class="risk-score" id="riskScoreText">Risk Score: 0</p>
+              <div class="risk-score-ring" id="riskScoreRing">
+                <svg viewBox="0 0 120 120" class="ring-svg">
+                  <circle cx="60" cy="60" r="52" class="ring-track"></circle>
+                  <circle cx="60" cy="60" r="52" class="ring-progress" id="ringProgress"></circle>
+                </svg>
+                <div class="ring-center">
+                  <span class="ring-score" id="ringScore">0</span>
+                  <span class="ring-label">score</span>
+                </div>
+              </div>
+              <div class="risk-banner-text">
+                <p class="risk-level" id="riskLevel">LOW RISK</p>
+                <p class="risk-score-line" id="riskScoreText">0 warning indicators detected</p>
+                <div class="risk-progress-track">
+                  <div class="risk-progress-fill" id="riskProgressFill"></div>
                 </div>
               </div>
             </div>
@@ -147,11 +204,11 @@
         </div>
 
         <!-- PRIVACY NOTICE -->
-        <div class="privacy-notice">
-          <span class="privacy-icon" aria-hidden="true">🔒</span>
+        <div class="privacy-notice glass-card" data-reveal>
+          <span class="privacy-icon privacy-lock" aria-hidden="true">🔒</span>
           <div>
-            <p class="privacy-title">Your privacy matters</p>
-            <p>Your message is analyzed locally in your browser. This website does not upload, store, or collect the information you enter. No analytics, no cookies, no server, no API calls.</p>
+            <p class="privacy-title">Your Information Stays With You</p>
+            <p>Your message is analyzed locally in your browser. CalamitySafePH does not upload, store, or collect the information you enter.</p>
           </div>
         </div>
       </div>
@@ -159,19 +216,23 @@
 
     <!-- ================= DISASTER RISKS ================= -->
     <section class="disaster-section" id="disaster-risks">
+      <div class="section-bg section-bg-storm" aria-hidden="true"></div>
       <div class="section-inner">
-        <p class="eyebrow">By disaster type</p>
-        <h2>Common cybersecurity risks per emergency</h2>
-        <p class="section-lead">Select a disaster category to see the scams and misinformation patterns most often seen during that type of emergency in the Philippines.</p>
+        <p class="eyebrow" data-reveal>By calamity type</p>
+        <h2 data-reveal>Know the Risk</h2>
+        <p class="section-lead" data-reveal>Different calamities create different opportunities for misinformation and cyber scams. Select a card to view the risks.</p>
 
         <div class="disaster-grid" id="disasterGrid">
           <!-- populated by JS -->
         </div>
 
-        <div class="disaster-detail" id="disasterDetail" hidden>
+        <div class="disaster-detail glass-card" id="disasterDetail" hidden>
           <div class="disaster-detail-header">
             <span id="disasterDetailIcon" class="disaster-detail-icon">⚠️</span>
-            <h3 id="disasterDetailTitle">General Emergency</h3>
+            <div>
+              <h3 id="disasterDetailTitle">General Emergency</h3>
+              <p id="disasterDetailDesc" class="disaster-detail-desc"></p>
+            </div>
           </div>
           <ul id="disasterDetailList" class="disaster-detail-list"></ul>
         </div>
@@ -180,10 +241,11 @@
 
     <!-- ================= HOW TO VERIFY ================= -->
     <section class="guide-section" id="how-to-verify">
+      <div class="section-bg section-bg-cloudy" aria-hidden="true"></div>
       <div class="section-inner">
-        <p class="eyebrow">Verification guide</p>
-        <h2>How to verify emergency information</h2>
-        <p class="section-lead">A message being urgent, shared widely, or naming a government agency does not make it verified. Follow this sequence before you act on or forward emergency information.</p>
+        <p class="eyebrow" data-reveal>Verification guide</p>
+        <h2 data-reveal>How to Verify Emergency Information</h2>
+        <p class="section-lead" data-reveal>A message being urgent, shared widely, or naming a government agency does not make it verified. Follow this sequence before you act on or forward emergency information.</p>
 
         <ol class="guide-list" id="guideList">
           <!-- populated by JS -->
@@ -193,9 +255,10 @@
 
     <!-- ================= SAFETY TIPS ================= -->
     <section class="tips-section" id="safety-tips">
+      <div class="section-bg section-bg-clear" aria-hidden="true"></div>
       <div class="section-inner">
-        <p class="eyebrow">Quick reminders</p>
-        <h2>Cybersecurity safety tips</h2>
+        <p class="eyebrow" data-reveal>Quick reminders</p>
+        <h2 data-reveal>Cybersecurity Safety Tips</h2>
 
         <div class="tips-grid" id="tipsGrid">
           <!-- populated by JS -->
@@ -209,10 +272,16 @@
   <footer class="site-footer">
     <div class="footer-inner">
       <div class="footer-brand">
-        <span class="brand-name">CyberSafe<em>PH</em></span>
-        <p>An educational cybersecurity project for disaster information awareness.</p>
+        <span class="brand-name">Calamity<em>Safe</em>PH</span>
+        <p>Stay alert. Stay safe. Verify before you share.</p>
       </div>
-      <p class="footer-built">Built with HTML, CSS, and JavaScript. No frameworks, no backend, no data collection.</p>
+      <nav class="footer-nav" aria-label="Footer">
+        <a href="#verify">Verify</a>
+        <a href="#disaster-risks">Disaster Risks</a>
+        <a href="#how-to-verify">Verification Guide</a>
+        <a href="#safety-tips">Safety Tips</a>
+      </nav>
+      <p class="footer-copy">© 2026 CalamitySafePH</p>
     </div>
   </footer>
 
